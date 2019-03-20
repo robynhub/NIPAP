@@ -44,6 +44,10 @@ class XhrController(BaseController):
             attr['node'] = req['node']
         if 'type' in req:
             attr['type'] = req['type']
+        if 'added' in req:
+            attr['added'] = req['added']
+        if 'last_modified' in req:
+            attr['last_modified'] = req['last_modified']
         if 'country' in req:
             attr['country'] = req['country']
         if 'indent' in req:
@@ -535,6 +539,8 @@ class XhrController(BaseController):
             status          Status of prefix; assigned, reserved, quarantine
             pool            ID of pool
             country         Country where the prefix is used
+            added           Timestamp of added prefix
+            last_modified   Timestamp of last modify
             order_id        Order identifier
             customer_id     Customer identifier
             vlan            VLAN ID
@@ -579,7 +585,12 @@ class XhrController(BaseController):
                     p.pool = Pool.get(int(request.json['pool']))
                 except NipapError, e:
                     return json.dumps({'error': 1, 'message': e.args, 'type': type(e).__name__})
-
+                    
+        if 'added'  in request.json:
+            p.added = validate_string(request.json, 'added')
+        if 'last_modified'  in request.json:
+            p.last_modified = validate_string(request.json, 'last_modified')
+            
         if 'country' in request.json:
             p.country = validate_string(request.json, 'country')
         if 'order_id' in request.json:
@@ -662,6 +673,11 @@ class XhrController(BaseController):
                 p.alarm_priority = validate_string(request.json, 'alarm_priority')
             if 'monitor' in request.json:
                 p.monitor = request.json['monitor']
+            # don't edit added and last modified by web ui
+            if 'added'  in request.json:
+                p.added = validate_string(request.json, 'added')
+            if 'last_modified'  in request.json:
+               p.last_modified = validate_string(request.json, 'last_modified')
             if 'country' in request.json:
                 p.country = validate_string(request.json, 'country')
             if 'order_id' in request.json:
@@ -894,6 +910,8 @@ class NipapJSONEncoder(json.JSONEncoder):
                 'pool_id': pool,
                 'type': obj.type,
                 'indent': obj.indent,
+                'added' : str(obj.added),
+                'last_modified': str(obj.last_modified),
                 'country': obj.country,
                 'order_id': obj.order_id,
                 'customer_id': obj.customer_id,

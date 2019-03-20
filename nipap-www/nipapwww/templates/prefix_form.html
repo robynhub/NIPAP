@@ -156,20 +156,20 @@ PREFIX DATA
 					     Creation Date
 					     </dt>
 					     <dd>
-					     {{ c.prefix.added }}
+						<input type="text" name="added" value="{{ c.prefix.added or '' }}" disabled="disabled" >
 					    </dd>
 				     </dl>
 				</div>
 				<div class="option">
-                                     <dl>
-                                             <dt>
-                                              Last Modified
-                                             </dt>
-                                             <dd>
-                                             {{ c.prefix.last_modified }}
-                                             </dd>
-                                     </dl>
-                                 </div>				 
+                     <dl>
+                         <dt>
+                          Last Modified
+                         </dt>
+                         <dd>
+                         <input type="text" name="last_modified" value="{{ c.prefix.last_modified or '' }}" disabled="disabled" > 
+                         </dd>
+                     </dl>
+                 </div>				 
 				 <div class="rule"></div>
 					
 				<div class="option">

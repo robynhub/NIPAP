@@ -701,6 +701,18 @@ function showPrefix(prefix, reference, offset) {
 	} else {
 		prefix_customer_id.html(prefix.customer_id);
 	}
+	
+	/* Add Added ID
+	prefix_row.append('<div id="prefix_added_id' + prefix.id + '">');
+	var prefix_added_id = $('#prefix_added_id' + prefix.id);
+	prefix_added_id.addClass('prefix_column');
+	prefix_added_id.addClass('prefix_added_id');
+	if (prefix.added_id == null || prefix.added_id == '') {
+		prefix_added_id.html("&nbsp;");
+	} else {
+		prefix_added_id.html(prefix.added);
+	}
+	*/
 
     // Add comment icon if a comment is present
 	prefix_row.append('<div id="prefix_comment' + prefix.id + '">');
@@ -2354,6 +2366,8 @@ function prefixFormSubmit(e) {
 		'node': $('input[name="prefix_node"]').val(),
 		'type': $('input[name="prefix_type"]:checked').val(),
 		'status': $('select[name="prefix_status"]').val(),
+		'added': $('input[name="added"]').val(),
+		'last_modified': $('input[name="last_modified"]').val(),
 		'country': $('input[name="prefix_country"]').val(),
 		'order_id': $('input[name="prefix_order_id"]').val(),
 		'customer_id': $('input[name="prefix_customer_id"]').val(),

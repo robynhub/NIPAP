@@ -69,6 +69,17 @@ class PrefixController(BaseController):
                 c.prefix.country = None
             else:
                 c.prefix.country = request.params['prefix_country']
+            
+            # immutable    
+            #if request.params['added'].strip() == '':
+            #    c.prefix.added = None
+            #else:
+            #    c.prefix.added = request.params['added']
+                
+            #if request.params['last_modified'].strip() == '':
+            #    c.prefix.last_modified = None
+            #else:
+            #    c.prefix.last_modified = request.params['last_modified']
 
             if request.params['prefix_comment'].strip() == '':
                 c.prefix.comment = None

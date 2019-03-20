@@ -638,6 +638,11 @@ tbody.listing > tr:hover {
 	width: 80px;
 }
 
+/*
+.prefix_order_id, .prefix_added_id {
+	width: 80px;
+} */
+
 .prefix_description {
 }
 
