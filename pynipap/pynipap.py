@@ -15,6 +15,7 @@
     * :class:`Pool`
     * :class:`Prefix`
     * :class:`Tag`
+    * :class:`Audit`
 
     Each of these maps to the NIPAP objects with the same name. See the main
     :py:mod:`NIPAP API documentation <nipap.backend>` for an overview of the
@@ -938,7 +939,19 @@ class Pool(Pynipap):
 
         return res
 
-
+class Audit(Pynipap):
+   def __init__(self):
+        Pynipap.__init__(self)
+        self.inherited_tags = {}
+        self.tags = {}
+        self.avps = {}
+        
+        
+    @classmethod
+    def search(cls, query, search_opts=None):
+        
+        return result
+    
 
 class Prefix(Pynipap):
     """ A prefix.
@@ -1486,6 +1499,7 @@ class NipapAuthorizationError(NipapAuthError):
 _cache = {
     'Pool': {},
     'Prefix': {},
+    'Audit': {},
     'VRF': {}
 }
 
