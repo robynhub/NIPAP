@@ -850,6 +850,8 @@ function showPrefixMenu(prefix_id) {
 			menu.append('<a href="/ng/prefix#/prefix/add/from-prefix/' + prefix_id + '">Add prefix from prefix</a>');
 		}
 
+		menu.append('<a target="_blank" href="https://apps.db.ripe.net/db-web-ui/#/query?searchtext=' + prefix_list[prefix_id].display_prefix.replace(/\/\d+$/,'') + '">Whois</a>');
+
 	}
 
 	menu.slideDown('fast');
