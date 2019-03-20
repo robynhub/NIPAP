@@ -31,7 +31,7 @@ from .command import Command
 valid_countries = [
     'AT', 'DE', 'DK', 'EE', 'FI', 'FR',
     'GB', 'HR', 'LT', 'LV', 'KZ', 'NL',
-    'RU', 'SE', 'US', 'IT' ] # test test, fill up! :)
+    'RU', 'SE', 'US' ] # test test, fill up! :)
 valid_prefix_types = [ 'host', 'reservation', 'assignment' ]
 valid_prefix_status = [ 'assigned', 'reserved', 'quarantine' ]
 valid_families = [ 'ipv4', 'ipv6', 'dual-stack' ]
@@ -362,7 +362,6 @@ def _parse_interp_vrf(query, indent=-5, pandop=False):
     if type(query['val2']) is dict:
         _parse_interp_vrf(query['val2'], indent+6)
 
-
 def list_vrf(arg, opts, shell_opts):
     """ List VRFs matching a search criteria
     """
@@ -496,30 +495,6 @@ def _parse_interp_prefix(query, indent=-5, pandop=False):
     if type(query['val2']) is dict:
         _parse_interp_prefix(query['val2'], indent+6)
 
-# TODO
-def audit(arg, opts, shell_opts):
-    """ Audit Single IP Address
-    """
-
-    if 'ip' not in opts:
-        print("ERROR: 'ip' must be specified.", file=sys.stderr)
-        sys.exit(1) 
-
-    ip = opts.get('ip')
-
-    print("Auditing for ip %s..." % (ip))
-    columns = [ 'vrf_rt', 'prefix_prefix', 'pool_name', 'timestamp', 'username', 'description' ]
-    table = 'ip_net_log'
-    auto_type_query = {
-            'val1': {
-                'val1'      : 'ip',
-                'operator'  : 'equals',
-                'val2'      : ip
-                }
-        }
-    #res = Audit.search(auto_type_query, { })  # need to be def
-
-######################################
 
 def list_prefix(arg, opts, shell_opts):
     """ List prefixes matching 'arg'
@@ -568,7 +543,7 @@ def list_prefix(arg, opts, shell_opts):
             'vrf_rt': { 'title': 'VRF RT' },
             }
     # default columns
-    columns = [ 'vrf_rt', 'prefix', 'type', 'tags', 'node', 'order_id', 'customer_id', 'description'  ]
+    columns = [ 'vrf_rt', 'prefix', 'type', 'tags', 'node', 'order_id', 'customer_id', 'description' ]
 
     # custom columns? prefer shell opts, then look in config file
     custom_columns = None
@@ -2092,7 +2067,6 @@ def complete_pool_name(arg):
 
 
 
-
 def complete_vrf(arg):
     """ Returns list of matching VRFs
     """
@@ -2141,7 +2115,6 @@ def complete_vrf_virtual(arg):
 cmds = {
     'type': 'command',
     'children': {
-        #address 
         'address': {
             'type': 'command',
             'children': {
@@ -2576,23 +2549,6 @@ cmds = {
                     }
                 }
             }
-        },
-
-        # Audit commands
-        'audit': {
-            'type': 'command',
-            'exec': audit,
-            'children': {
-                'ip': {
-                    'type': 'option',
-                    'argument': {
-                        'type': 'value',
-                        'content_type': str,
-                        'description': 'IP Address'
-                    }
-                },
-            },
-            
         },
 
         # VRF commands

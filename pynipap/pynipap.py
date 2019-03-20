@@ -939,18 +939,18 @@ class Pool(Pynipap):
 
         return res
 
-class Audit(Pynipap):
-   def __init__(self):
-        Pynipap.__init__(self)
-        self.inherited_tags = {}
-        self.tags = {}
-        self.avps = {}
+#class Audit(Pynipap):
+#   def __init__(self):
+#        Pynipap.__init__(self)
+#        self.inherited_tags = {}
+#        self.tags = {}
+#        self.avps = {}
         
         
-    @classmethod
-    def search(cls, query, search_opts=None):
-        
-        return result
+#    @classmethod
+#    def search(cls, query, search_opts=None):
+#        
+#        return result
     
 
 class Prefix(Pynipap):
