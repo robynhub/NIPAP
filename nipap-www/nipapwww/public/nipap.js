@@ -318,7 +318,7 @@ function get_range(prefix) {
 	range = ipaddr.IPv4.networkAddressFromCIDR(prefix) + ' - ' 
 		+ ipaddr.IPv4.broadcastAddressFromCIDR(prefix); 
 	} catch (error){
-		range = '';
+		range = prefix;
 	}
 	return range;
 }
