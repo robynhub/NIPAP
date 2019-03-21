@@ -547,6 +547,12 @@ tbody.listing > tr:hover {
 
 .prefix_ind_pref {
 	width: 200px;
+	min-width: 200px;
+}
+
+.prefix_ind_range {
+	width: 200px;
+	min-width: 200px;
 }
 
 .prefix_indent {

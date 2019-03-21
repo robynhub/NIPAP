@@ -645,7 +645,7 @@ function showPrefix(prefix, reference, offset) {
 	prefix_row.append('<div id="prefix_ind_range' + prefix.id + '">');
 	var prefix_ind_range = $('#prefix_ind_range' + prefix.id);
 	prefix_ind_range.addClass('prefix_column');
-	prefix_ind_range.addClass('prefix_range');
+	prefix_ind_range.addClass('prefix_ind_range');
 	// add prefix range
 	prefix_ind_range.append('<div id="prefix_range' + prefix.id + '">');
 	var prefix_range = $('#prefix_range' + prefix.id);
