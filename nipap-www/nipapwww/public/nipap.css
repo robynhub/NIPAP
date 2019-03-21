@@ -418,7 +418,7 @@ input[type="submit"] {
 }
 
 .prefix_list_header {
-	max-width: 1200px;
+	max-width: 1300px;
 	padding: 7px;
 	font-weight: bold;
 	text-decoration: underline;
@@ -512,14 +512,14 @@ tbody.listing > tr:hover {
 	margin-right: auto;
 	padding: 10px;
 
-	max-width: 1200px;
+	max-width: 1300px;
 }
 
 .prefix_entry {
 	display: table;
 	line-height: 10px;
 	width: 100%;
-	max-width: 1200px;
+	max-width: 1300px;
 	font-size: 12px;
 	padding: 0;
 }
@@ -546,7 +546,7 @@ tbody.listing > tr:hover {
 }
 
 .prefix_ind_pref {
-	width: 300px;
+	width: 200px;
 }
 
 .prefix_indent {
@@ -651,6 +651,11 @@ tbody.listing > tr:hover {
 	vertical-align: middle;
 }
 
+.prefix_range {
+	width: 200px;
+	vertical-align: middle;
+}
+
 .prefix_order_id, .prefix_customer_id {
 	width: 80px;
 }
@@ -661,6 +666,7 @@ tbody.listing > tr:hover {
 } */
 
 .prefix_description {
+	width: 300px;
 }
 
 .prefix_button_col {

@@ -288,10 +288,11 @@ function ajaxErrorHandler(e, jqXHR, ajaxSettings, thrownError) {
  *********************************************************************/
 
 /* 
- * Check if the ip address is global and whoisable
+ * Check if the ip address is global and whoisable (works both IPV4 or IPV6)
  */
-function is_whoisable(ip) {
+function is_whoisable(prefix) {
 	var e;
+	var ip = prefix.replace(/\/\d+$/,'');
 	try {
 	var type = ipaddr.parse(ip).range();
 	if (type == 'unicast' || type ==  'unspecified' )
@@ -304,11 +305,23 @@ function is_whoisable(ip) {
 		e = error1;
 		return false;
 	}
-	
-	
 	return true;
 }
 
+/* 
+ * Calculate the RIR range (format: network - broadcast) IPV4 Only.
+ */
+function get_range(prefix) {
+	var range;
+	// calculating range
+	try {
+	range = ipaddr.IPv4.networkAddressFromCIDR(prefix) + ' - ' 
+		+ ipaddr.IPv4.broadcastAddressFromCIDR(prefix); 
+	} catch (error){
+		range = '';
+	}
+	return range;
+}
 
 /*
  * Expands a collapse group
@@ -607,6 +620,7 @@ function showPrefix(prefix, reference, offset) {
 	prefix_prefix.addClass('prefix_column');
 	prefix_prefix.addClass('prefix_prefix');
 
+
 	// Different actions for different list types...
 	// First: select a prefix in the list
 	if (prefix_link_type == 'select') {
@@ -625,6 +639,19 @@ function showPrefix(prefix, reference, offset) {
 	} else {
 		prefix_prefix.html(prefix.display_prefix);
 	}
+
+	// add indent and range container
+	var range = get_range(prefix.display_prefix);
+	prefix_row.append('<div id="prefix_ind_range' + prefix.id + '">');
+	var prefix_ind_range = $('#prefix_ind_range' + prefix.id);
+	prefix_ind_range.addClass('prefix_column');
+	prefix_ind_range.addClass('prefix_range');
+	// add prefix range
+	prefix_ind_range.append('<div id="prefix_range' + prefix.id + '">');
+	var prefix_range = $('#prefix_range' + prefix.id);
+	prefix_range.addClass('prefix_column');
+	prefix_range.addClass('prefix_range');
+	prefix_range.html(range);
 
 	// add button if list not used to select prefix to add to pool or select
 	// prefix to allocate from
@@ -664,8 +691,7 @@ function showPrefix(prefix, reference, offset) {
 	ng_scope.$apply();
 
 	// Add whois button
-	var ip = prefix.display_prefix.replace(/\/\d+$/,'');
-	if (prefix.type[0].toUpperCase() == 'A' && is_whoisable(ip) ) {
+	if (prefix.type[0].toUpperCase() == 'A' && is_whoisable(prefix.display_prefix) ) {
 		prefix_row.append('<div id="whois_prefix_type' + prefix.id + '">');
 		var whois_prefix_type = $('#whois_prefix_type' + prefix.id);
 		whois_prefix_type.addClass('prefix_column');
@@ -676,7 +702,7 @@ function showPrefix(prefix, reference, offset) {
 		whois_type_icon.addClass('whois_type_icon');
 		// Add tooltip to whois type icon
 		whois_type_icon.attr('uib-tooltip', 'Whois');
-		whois_type_icon.html('<a style="color: white;" target="_blank" href="https://apps.db.ripe.net/db-web-ui/#/query?searchtext=' + ip + '">W</a>');
+		whois_type_icon.html('<a style="color: white;" target="_blank" href="https://apps.db.ripe.net/db-web-ui/#/query?searchtext=' + prefix.display_prefix.replace(/\/\d+$/,'') + '">W</a>');
 		// Run element through AngularJS compiler to "activate" directives (the
 		// AngularUI/Bootstrap tooltip)
 		whois_type_icon.replaceWith(ng_compile(whois_type_icon)(ng_scope));
@@ -836,9 +862,11 @@ function getPopupMenu(ref, title, data_id) {
  * Show the prefix menu
  */
 function showPrefixMenu(prefix_id) {
+	//var range = get_range(prefix_list[prefix_id].display_prefix);
 
 	// Add prefix menu
 	var button = $('#prefix_button' + prefix_id);
+	//var menu = getPopupMenu(button, 'Prefix' + range, prefix_id);
 	var menu = getPopupMenu(button, 'Prefix', prefix_id);
 
 	// Add different manu entries depending on where the prefix list is displayed
@@ -905,9 +933,6 @@ function showPrefixMenu(prefix_id) {
 		if (!hasMaxPreflen(prefix_list[prefix_id])) {
 			menu.append('<a href="/ng/prefix#/prefix/add/from-prefix/' + prefix_id + '">Add prefix from prefix</a>');
 		}
-
-		// Removed: not needed
-		//menu.append('<a target="_blank" href="https://apps.db.ripe.net/db-web-ui/#/query?searchtext=' + prefix_list[prefix_id].display_prefix.replace(/\/\d+$/,'') + '">Whois</a>');
 
 	}
 
