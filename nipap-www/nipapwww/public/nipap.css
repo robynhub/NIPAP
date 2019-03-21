@@ -601,8 +601,11 @@ tbody.listing > tr:hover {
 	color: #FFFFFF;
 	text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.3);
 
-	border: 1px solid #E9A002;
-	background-color: #FFA901;
+	//border: 1px solid #E9A002;
+	//background-color: #FFA901;
+	
+	border: 1px solid #17e902;
+	background-color: ##01ff01;
 	background-image: -webkit-gradient(linear, left top, left bottom, from(#F0D002), to(#FFA901));
 	background-image: -webkit-linear-gradient(top, #F0D002, #FFA901);
 	background-image: -moz-linear-gradient(center top , #F0D002, #FFA901);
@@ -623,6 +626,20 @@ tbody.listing > tr:hover {
 	background-image: -ms-linear-gradient(top, #02E81D, #089901);
 	background-image: -o-linear-gradient(top, #02E81D, #089901);
 	background-image: linear-gradient(top, #02E81D, #089901);
+}
+
+.whois_type_icon {
+	color: #FFFFFF;
+	text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.3);
+
+	border: 1px solid #19A002;
+	background-color: #1FA901;
+	background-image: -webkit-gradient(linear, left top, left bottom, from(#10D002), to(#1FA901));
+	background-image: -webkit-linear-gradient(top, #10D002, #1FA901);
+	background-image: -moz-linear-gradient(center top , #10D002, #1FA901);
+	background-image: -ms-linear-gradient(top, #10D002, #1FA901);
+	background-image: -o-linear-gradient(top, #10D002, #1FA901);
+	background-image: linear-gradient(top, #10D002, #1FA901);
 }
 
 .prefix_node {

@@ -36,6 +36,7 @@ var stats = new Object();
 // the prefix add and pool edit pages.
 var cur_opts = new Object();
 
+
 /*
  * Holy shit, this is an ugly hack...
  * As the prefix search results sometimes need to link to an edit-prefix-page
@@ -285,6 +286,29 @@ function ajaxErrorHandler(e, jqXHR, ajaxSettings, thrownError) {
  * Prefix list functions
  *
  *********************************************************************/
+
+/* 
+ * Check if the ip address is global and whoisable
+ */
+function is_whoisable(ip) {
+	var e;
+	try {
+	var type = ipaddr.parse(ip).range();
+	if (type == 'unicast' || type ==  'unspecified' )
+		return true
+	else
+		return false
+	
+	} 
+	catch (error1) {
+		e = error1;
+		return false;
+	}
+	
+	
+	return true;
+}
+
 
 /*
  * Expands a collapse group
@@ -639,6 +663,26 @@ function showPrefix(prefix, reference, offset) {
 	prefix_type_icon.replaceWith(ng_compile(prefix_type_icon)(ng_scope));
 	ng_scope.$apply();
 
+	// Add whois button
+	var ip = prefix.display_prefix.replace(/\/\d+$/,'');
+	if (prefix.type[0].toUpperCase() == 'A' && is_whoisable(ip) ) {
+		prefix_row.append('<div id="whois_prefix_type' + prefix.id + '">');
+		var whois_prefix_type = $('#whois_prefix_type' + prefix.id);
+		whois_prefix_type.addClass('prefix_column');
+		whois_prefix_type.addClass('prefix_type');
+		whois_prefix_type.append('<div id="whois_type_icon' + prefix.id + '">');
+		var whois_type_icon = $('#whois_type_icon' + prefix.id);
+		whois_type_icon.addClass('prefix_type_icon');
+		whois_type_icon.addClass('whois_type_icon');
+		// Add tooltip to whois type icon
+		whois_type_icon.attr('uib-tooltip', 'Whois');
+		whois_type_icon.html('<a style="color: white;" target="_blank" href="https://apps.db.ripe.net/db-web-ui/#/query?searchtext=' + ip + '">W</a>');
+		// Run element through AngularJS compiler to "activate" directives (the
+		// AngularUI/Bootstrap tooltip)
+		whois_type_icon.replaceWith(ng_compile(whois_type_icon)(ng_scope));
+		ng_scope.$apply();
+	}
+
 	// Add tags
 	prefix_row.append('<div id="prefix_tags' + prefix.id + '">');
 	var prefix_tags = $('#prefix_tags' + prefix.id);
@@ -862,7 +906,8 @@ function showPrefixMenu(prefix_id) {
 			menu.append('<a href="/ng/prefix#/prefix/add/from-prefix/' + prefix_id + '">Add prefix from prefix</a>');
 		}
 
-		menu.append('<a target="_blank" href="https://apps.db.ripe.net/db-web-ui/#/query?searchtext=' + prefix_list[prefix_id].display_prefix.replace(/\/\d+$/,'') + '">Whois</a>');
+		// Removed: not needed
+		//menu.append('<a target="_blank" href="https://apps.db.ripe.net/db-web-ui/#/query?searchtext=' + prefix_list[prefix_id].display_prefix.replace(/\/\d+$/,'') + '">Whois</a>');
 
 	}
 
