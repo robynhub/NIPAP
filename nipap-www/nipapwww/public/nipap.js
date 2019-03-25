@@ -37,6 +37,7 @@ var stats = new Object();
 var cur_opts = new Object();
 
 
+
 /*
  * Holy shit, this is an ugly hack...
  * As the prefix search results sometimes need to link to an edit-prefix-page
@@ -143,6 +144,18 @@ function showDialogNotice(title, msg) {
 	dialog.dialog('open');
 
 	return false;
+}
+
+function vrfpopup(rt) { 
+	if (rt == ''){
+		window.open('http://10.200.0.112/api/cvrf.php','_blank');
+	} else {
+		newin = window.open('http://10.200.0.112/api/cvrf.php?query=' + rt,'rt','scrollbars=no,resizable=yes, width=400,height=230,status=no,location=no,toolbar=no'); 
+	}
+}
+
+function whoispopup(prefix) { 
+		newin = window.open('https://apps.db.ripe.net/db-web-ui/#/query?searchtext=' + prefix,'prefix','scrollbars=no,resizable=yes, width=800,height=680,status=no,location=no,toolbar=no'); 
 }
 
 /*
@@ -702,7 +715,7 @@ function showPrefix(prefix, reference, offset) {
 		whois_type_icon.addClass('whois_type_icon');
 		// Add tooltip to whois type icon
 		whois_type_icon.attr('uib-tooltip', 'Whois');
-		whois_type_icon.html('<a style="color: white;" target="_blank" href="https://apps.db.ripe.net/db-web-ui/#/query?searchtext=' + prefix.display_prefix.replace(/\/\d+$/,'') + '">W</a>');
+		whois_type_icon.html('<a style="color: white;" href="javascript:whoispopup(\'' + prefix.display_prefix.replace(/\/\d+$/,'') + '\');">W</a>');
 		// Run element through AngularJS compiler to "activate" directives (the
 		// AngularUI/Bootstrap tooltip)
 		whois_type_icon.replaceWith(ng_compile(whois_type_icon)(ng_scope));

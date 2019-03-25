@@ -23,7 +23,8 @@ $output = "";
 
 
 foreach ($result as $id => $vrf) {
-    
+    if ($vrf['rt'] == "")
+        continue;
     $vrf_num = explode(':',$vrf['rt']);
     $ASN = $vrf_num[0];
     $vrf_num = $vrf_num[1];
