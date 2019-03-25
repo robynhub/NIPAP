@@ -1,10 +1,10 @@
 Metadata-Version: 1.0
 Name: nipap-www
-Version: 0.29.8
-Summary: web frontend for NIPAP
-Home-page: http://SpriteLink.github.com/NIPAP
-Author: Kristian Larsson, Lukas Garberg
-Author-email: kll@tele2.net, lukas@spritelink.net
+Version: 0.29.8-Connesi
+Summary: web frontend for NIPAP Connesi-Customized
+Home-page: https://github.com/robynhub/NIPAP
+Author: Kristian Larsson, Lukas Garberg, Antonio Bartolini
+Author-email: kll@tele2.net, lukas@spritelink.net, antonio.bartolini@connesi.it
 License: MIT
 Description: UNKNOWN
 Platform: UNKNOWN
