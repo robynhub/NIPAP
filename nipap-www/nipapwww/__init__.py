@@ -1,4 +1,4 @@
-__version__     = "0.29.8-connesi"
+__version__     = "0.30.0-connesi"
 __author__      = "Kristian Larsson, Lukas Garberg, Antonio Bartolini"
 __author_email__ = "kll@tele2.net, lukas@spritelink.net, antonio.bartolini@connesi.it"
 __license__     = "MIT"

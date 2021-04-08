@@ -653,7 +653,7 @@ tbody.listing > tr:hover {
 }
 
 .prefix_tags, .prefix_comment {
-	width: 26px;
+	width: 60px;
 	vertical-align: middle;
 }
 
@@ -672,7 +672,7 @@ tbody.listing > tr:hover {
 } */
 
 .prefix_description {
-	width: 300px;
+	width: 500px;
 }
 
 .prefix_button_col {

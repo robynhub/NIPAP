@@ -783,7 +783,7 @@ function showPrefix(prefix, reference, offset) {
 		prefix_customer_id.html("&nbsp;");
 	} else {
 		prefix_customer_id.html(prefix.customer_id);
-	}*/
+	} */
 	
 	/* Add Added ID
 	prefix_row.append('<div id="prefix_added_id' + prefix.id + '">');
