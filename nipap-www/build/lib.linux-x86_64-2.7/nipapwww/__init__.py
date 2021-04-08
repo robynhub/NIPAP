@@ -1,0 +1,6 @@
+__version__     = "0.29.8-connesi"
+__author__      = "Kristian Larsson, Lukas Garberg, Antonio Bartolini"
+__author_email__ = "kll@tele2.net, lukas@spritelink.net, antonio.bartolini@connesi.it"
+__license__     = "MIT"
+__status__      = "Development"
+__url__         = "https://github.com/robynhub/NIPAP"
