@@ -357,113 +357,107 @@ $_$ LANGUAGE plpgsql;
 -- full function
 CREATE OR REPLACE FUNCTION find_free_prefix(arg_vrf integer, IN arg_prefixes inet[], arg_wanted_prefix_len integer, arg_count integer) RETURNS SETOF inet AS $_$
 DECLARE
-	i_family integer;
-	i_found integer;
-	p int;
-	search_prefix inet;
-	current_prefix inet;
-	max_prefix_len integer;
-	covering_prefix inet;
+    i_family integer;
+    p int;
+    search_prefix inet;
+    prefix_id integer;
+    free_ranges iprange[];
+    free_cidrs cidr[];
+    candidate cidr;
+    generated cidr;
+    seen_prefixes cidr[] := '{}';
+    results text[] := '{}';
+    max_prefix_len integer;
+    wanted_size bigint := 2 ^ (32 - arg_wanted_prefix_len);
+    waste bigint;
+    subnet_count bigint;
+    i bigint;
+    entry record;
+    i_found integer := 0;
 BEGIN
-	covering_prefix := NULL;
-	-- sanity checking
-	-- make sure all provided search_prefixes are of same family
-	FOR p IN SELECT generate_subscripts(arg_prefixes, 1) LOOP
-		IF i_family IS NULL THEN
-			i_family := family(arg_prefixes[p]);
-		END IF;
+  -- sanity checking
+  -- make sure all provided search_prefixes are of same family
+    FOR p IN SELECT generate_subscripts(arg_prefixes, 1) LOOP
+        IF i_family IS NULL THEN
+            i_family := family(arg_prefixes[p]);
+        END IF;
+        IF i_family != family(arg_prefixes[p]) THEN
+            RAISE EXCEPTION 'Search prefixes of inconsistent address-family provided';
+        END IF;
+    END LOOP;
 
-		IF i_family != family(arg_prefixes[p]) THEN
-			RAISE EXCEPTION 'Search prefixes of inconsistent address-family provided';
-		END IF;
-	END LOOP;
+    max_prefix_len := CASE WHEN i_family = 4 THEN 32 ELSE 128 END;
 
-	-- determine maximum prefix-length for our family
-	IF i_family = 4 THEN
-		max_prefix_len := 32;
-	ELSE
-		max_prefix_len := 128;
-	END IF;
+    IF arg_wanted_prefix_len > max_prefix_len THEN
+        RAISE EXCEPTION 'Requested prefix-length exceeds max prefix-length %', max_prefix_len;
+    END IF;
 
-	-- the wanted prefix length cannot be more than 32 for ipv4 or more than 128 for ipv6
-	IF arg_wanted_prefix_len > max_prefix_len THEN
-		RAISE EXCEPTION 'Requested prefix-length exceeds max prefix-length %', max_prefix_len;
-	END IF;
-	--
+    -- loop sui prefix pool
+    FOR p IN SELECT generate_subscripts(arg_prefixes, 1) LOOP
+        search_prefix := arg_prefixes[p];
 
-	i_found := 0;
+        -- tiro fuori id prefix
+        SELECT id INTO prefix_id FROM ip_net_plan
+        WHERE prefix = search_prefix AND vrf_id = arg_vrf
+        LIMIT 1;
 
-	-- loop through our search list of prefixes
-	FOR p IN SELECT generate_subscripts(arg_prefixes, 1) LOOP
-		-- save the current prefix in which we are looking for a candidate
-		search_prefix := arg_prefixes[p];
+        IF prefix_id IS NULL THEN
+            CONTINUE;
+        END IF;
 
-		IF (masklen(search_prefix) > arg_wanted_prefix_len) THEN
-			CONTINUE;
-		END IF;
+        -- trovo buchi liberi
+        free_ranges := ARRAY(SELECT find_free_ranges(prefix_id));
+        free_cidrs := ARRAY(SELECT iprange2cidr(free_ranges));
 
-		SELECT set_masklen(search_prefix, arg_wanted_prefix_len) INTO current_prefix;
+        FOREACH candidate IN ARRAY free_cidrs LOOP
+            -- escludi le subnet più piccole
+            IF masklen(candidate) > arg_wanted_prefix_len THEN
+                CONTINUE;
+            END IF;
 
-		-- we step through our search_prefix in steps of the wanted prefix
-		-- length until we are beyond the broadcast size, ie end of our
-		-- search_prefix
-		WHILE set_masklen(current_prefix, masklen(search_prefix)) <= broadcast(search_prefix) LOOP
-			-- tests put in order of speed, fastest one first
+            IF candidate = ANY(seen_prefixes) THEN
+                CONTINUE;
+            END IF;
 
-			-- the following are address family agnostic
-			IF current_prefix IS NULL THEN
-				SELECT broadcast(current_prefix) + 1 INTO current_prefix;
-				CONTINUE;
-			END IF;
-			IF EXISTS (SELECT 1 FROM ip_net_plan WHERE vrf_id = arg_vrf AND prefix = current_prefix) THEN
-				SELECT broadcast(current_prefix) + 1 INTO current_prefix;
-				CONTINUE;
-			END IF;
+            IF masklen(candidate) = arg_wanted_prefix_len THEN
+                -- exact fit: waste = 0
+                seen_prefixes := array_append(seen_prefixes, candidate);
+                results := array_append(results, candidate::text  '|0');
+                CONTINUE;
+            END IF;
 
-			-- avoid prefixes larger than the current_prefix but inside our search_prefix
-			covering_prefix := (SELECT prefix FROM ip_net_plan WHERE vrf_id = arg_vrf AND iprange(prefix) >>= iprange(current_prefix::cidr) AND iprange(prefix) << iprange(search_prefix::cidr) ORDER BY masklen(prefix) ASC LIMIT 1);
-			IF covering_prefix IS NOT NULL THEN
-				SELECT set_masklen(broadcast(covering_prefix) + 1, arg_wanted_prefix_len) INTO current_prefix;
-				CONTINUE;
-			END IF;
+            -- esplodo i le subnet più grandi
+            subnet_count := 2 ^ (arg_wanted_prefix_len - masklen(candidate));
+            waste := (2 ^ (32 - masklen(candidate))) - wanted_size;
 
-			-- prefix must not contain any breakouts, that would mean it's not empty, ie not free
-			IF EXISTS (SELECT 1 FROM ip_net_plan WHERE vrf_id = arg_vrf AND iprange(prefix) <<= iprange(current_prefix::cidr)) THEN
-				SELECT broadcast(current_prefix) + 1 INTO current_prefix;
-				CONTINUE;
-			END IF;
+            FOR i IN 0..subnet_count-1 LOOP
+                generated := set_masklen(network(candidate)::inet + (i * wanted_size), arg_wanted_prefix_len);
+                IF NOT generated = ANY(seen_prefixes) THEN
+                    seen_prefixes := array_append(seen_prefixes, generated);
+                    results := array_append(results, generated::text  '|' || waste::text);
+                END IF;
+            END LOOP;
+        END LOOP;
+    END LOOP;
 
-			-- while the following two tests are family agnostic, they use
-			-- functions and so are not indexed
-			-- TODO: should they be indexed?
+    -- ordino per waste e restituisco i primi arg_count
+    FOR entry IN
+        SELECT split_part(r, '|', 1)::cidr AS prefix,
+               split_part(r, '|', 2)::bigint AS waste
+        FROM unnest(results) AS r
+        ORDER BY waste ASC, prefix ASC
+    LOOP
+        IF i_found >= arg_count THEN
+            RETURN;
+        END IF;
 
-			IF ((i_family = 4 AND masklen(search_prefix) < 31) OR i_family = 6 AND masklen(search_prefix) < 127)THEN
-				IF (set_masklen(network(search_prefix), max_prefix_len) = current_prefix) THEN
-					SELECT broadcast(current_prefix) + 1 INTO current_prefix;
-					CONTINUE;
-				END IF;
-				IF (set_masklen(broadcast(search_prefix), max_prefix_len) = current_prefix) THEN
-					SELECT broadcast(current_prefix) + 1 INTO current_prefix;
-					CONTINUE;
-				END IF;
-			END IF;
+        RETURN NEXT entry.prefix;
+        i_found := i_found + 1;
+    END LOOP;
 
-			RETURN NEXT current_prefix;
-
-			i_found := i_found + 1;
-			IF i_found >= arg_count THEN
-				RETURN;
-			END IF;
-
-			current_prefix := broadcast(current_prefix) + 1;
-		END LOOP;
-
-	END LOOP;
-
-	RETURN;
-
+    RETURN;
 END;
-$_$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 
 
