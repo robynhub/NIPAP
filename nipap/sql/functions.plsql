@@ -355,97 +355,102 @@ END;
 $_$ LANGUAGE plpgsql;
 
 -- full function
-CREATE OR REPLACE FUNCTION find_free_prefix(arg_vrf integer, IN arg_prefixes inet[], arg_wanted_prefix_len integer, arg_count integer) RETURNS SETOF inet AS $_$
+CREATE OR REPLACE FUNCTION find_free_prefix(
+    arg_vrf integer,
+    IN arg_prefixes inet[],
+    arg_wanted_prefix_len integer,
+    arg_count integer
+) RETURNS SETOF inet AS $_$
 DECLARE
     i_family integer;
     p int;
     search_prefix inet;
     prefix_id integer;
     free_ranges iprange[];
-    free_cidrs cidr[];
+    free_cidrs  cidr[];
+    -- collection of results
+    seen_prefixes cidr[] := '{}';     -- for final deduplication
+    exact_entries  text[] := '{}';    -- "prefix|0"
+    subnet_entries  text[] := '{}';    -- "subnet_cidr|waste" (subnet > wanted)
     candidate cidr;
-    generated cidr;
-    seen_prefixes cidr[] := '{}';
-    results text[] := '{}';
+    subnet_cidr cidr;
+    generated inet;
     max_prefix_len integer;
-    wanted_size bigint := 2 ^ (32 - arg_wanted_prefix_len);
-    waste bigint;
-    subnet_count bigint;
-    i bigint;
-    entry record;
-    i_found integer := 0;
+    wanted_size numeric;              -- 2^(max - wanted) only for waste calculus
+    waste numeric;
+    entry  record;
+    entryb record;
+    i_found int := 0;
 BEGIN
-  -- sanity checking
-  -- make sure all provided search_prefixes are of same family
+    -- sanity checking
+    -- make sure all provided search_prefixes are of same family
     FOR p IN SELECT generate_subscripts(arg_prefixes, 1) LOOP
         IF i_family IS NULL THEN
             i_family := family(arg_prefixes[p]);
-        END IF;
-        IF i_family != family(arg_prefixes[p]) THEN
+        ELSIF i_family != family(arg_prefixes[p]) THEN
             RAISE EXCEPTION 'Search prefixes of inconsistent address-family provided';
         END IF;
     END LOOP;
 
     max_prefix_len := CASE WHEN i_family = 4 THEN 32 ELSE 128 END;
-
     IF arg_wanted_prefix_len > max_prefix_len THEN
         RAISE EXCEPTION 'Requested prefix-length exceeds max prefix-length %', max_prefix_len;
     END IF;
 
-    -- loop sui prefix pool
+    wanted_size := power(2::numeric, max_prefix_len - arg_wanted_prefix_len);
+
+    -- scanning required pools
     FOR p IN SELECT generate_subscripts(arg_prefixes, 1) LOOP
         search_prefix := arg_prefixes[p];
 
-        -- tiro fuori id prefix
-        SELECT id INTO prefix_id FROM ip_net_plan
-        WHERE prefix = search_prefix AND vrf_id = arg_vrf
+        -- find prefix_id (necessary for find_free_ranges)
+        SELECT id INTO prefix_id
+        FROM ip_net_plan
+        WHERE vrf_id = arg_vrf AND prefix = search_prefix
         LIMIT 1;
 
         IF prefix_id IS NULL THEN
             CONTINUE;
         END IF;
 
-        -- trovo buchi liberi
+        -- free ranges -> free CIDR 
         free_ranges := ARRAY(SELECT find_free_ranges(prefix_id));
-        free_cidrs := ARRAY(SELECT iprange2cidr(free_ranges));
+        free_cidrs  := ARRAY(SELECT iprange2cidr(free_ranges));
 
+        -- ranking: exact fit first ande then larger subnets to explode
         FOREACH candidate IN ARRAY free_cidrs LOOP
-            -- escludi le subnet più piccole
+            -- ignore smaller subnets
             IF masklen(candidate) > arg_wanted_prefix_len THEN
                 CONTINUE;
             END IF;
 
+            -- deduplicate identical subnets in input
             IF candidate = ANY(seen_prefixes) THEN
                 CONTINUE;
             END IF;
 
             IF masklen(candidate) = arg_wanted_prefix_len THEN
-                -- exact fit: waste = 0
+                -- Exact fit (waste = 0)
+                exact_entries := array_append(exact_entries, candidate::text  '|0');
                 seen_prefixes := array_append(seen_prefixes, candidate);
-                results := array_append(results, candidate::text  '|0');
-                CONTINUE;
+            ELSE
+                -- larger subnet to explode after in wanted
+                -- calculate waste of the source subnet: size(subnet) - size(wanted)
+                waste := power(2::numeric, max_prefix_len - masklen(candidate)) - wanted_size;
+
+                -- avoid pushing the same subnet twice
+                subnet_entries := array_append(subnet_entries, candidate::text  '|' || waste::text);
+                -- subnets are not added in seen_prefixes because the subprefixes have to be deduplicated
             END IF;
-
-            -- esplodo i le subnet più grandi
-            subnet_count := 2 ^ (arg_wanted_prefix_len - masklen(candidate));
-            waste := (2 ^ (32 - masklen(candidate))) - wanted_size;
-
-            FOR i IN 0..subnet_count-1 LOOP
-                generated := set_masklen(network(candidate)::inet + (i * wanted_size), arg_wanted_prefix_len);
-                IF NOT generated = ANY(seen_prefixes) THEN
-                    seen_prefixes := array_append(seen_prefixes, generated);
-                    results := array_append(results, generated::text  '|' || waste::text);
-                END IF;
-            END LOOP;
         END LOOP;
     END LOOP;
 
-    -- ordino per waste e restituisco i primi arg_count
+    -- 1) exact fit (waste=0), ordered by prefix
     FOR entry IN
-        SELECT split_part(r, '|', 1)::cidr AS prefix,
-               split_part(r, '|', 2)::bigint AS waste
-        FROM unnest(results) AS r
-        ORDER BY waste ASC, prefix ASC
+        SELECT split_part(e, '|', 1)::cidr AS prefix,
+               split_part(e, '|', 2)::numeric AS waste
+        FROM unnest(exact_entries) e
+        ORDER BY prefix ASC
     LOOP
         IF i_found >= arg_count THEN
             RETURN;
@@ -454,33 +459,38 @@ BEGIN
         RETURN NEXT entry.prefix;
         i_found := i_found + 1;
     END LOOP;
+-- 2) derived from larger subnets, sorting subnets by increasing waste
+    FOR entryb IN
+        SELECT split_part(e, '|', 1)::cidr   AS subnet,
+               split_part(e, '|', 2)::numeric AS waste
+        FROM unnest(subnet_entries) e
+        GROUP BY 1,2                   -- avoid duplicates from the same subnet
+        ORDER BY waste ASC, subnet ASC
+    LOOP
+        subnet_cidr := entryb.subnet;
+
+        -- first /wanted 
+        generated := set_masklen(network(subnet_cidr), arg_wanted_prefix_len);
+
+        -- generate /wanted as long as we stay within the subnet and arg_count is not exceeded
+        WHILE iprange(generated::cidr) << iprange(subnet_cidr) LOOP
+            EXIT WHEN i_found >= arg_count;
+
+            -- final deduplication: avoid collisions with exact or other derivations
+            IF NOT generated::cidr = ANY(seen_prefixes) THEN
+                seen_prefixes := array_append(seen_prefixes, generated::cidr);
+                RETURN NEXT generated::cidr;
+                i_found := i_found + 1;
+            END IF;
+
+            -- next subnet of same size
+            generated := set_masklen(broadcast(generated) + 1, arg_wanted_prefix_len);
+        END LOOP;
+
+        EXIT WHEN i_found >= arg_count;
+    END LOOP;
 
     RETURN;
-END;
-$$ LANGUAGE plpgsql;
-
-
-
---
--- get_prefix provides a convenient and MVCC-proof way of getting the next
--- available prefix from another prefix.
---
-CREATE OR REPLACE FUNCTION get_prefix(arg_vrf integer, IN arg_prefixes inet[], arg_wanted_prefix_len integer) RETURNS inet AS $_$
-DECLARE
-	p inet;
-BEGIN
-	LOOP
-		-- get a prefix
-		SELECT prefix INTO p FROM find_free_prefix(arg_vrf, arg_prefixes, arg_wanted_prefix_len) AS prefix;
-
-		BEGIN
-			INSERT INTO ip_net_plan (vrf_id, prefix) VALUES (arg_vrf, p);
-			RETURN p;
-		EXCEPTION WHEN unique_violation THEN
-			-- Loop and try to find a new prefix
-		END;
-
-	END LOOP;
 END;
 $_$ LANGUAGE plpgsql;
 
